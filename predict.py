@@ -4,45 +4,48 @@ import matplotlib.pyplot as plot
 
 ### Helper Functions ###
 def relu(x):
-    # cap at 0 to prevent overflow and inaccurate numbers
     return np.maximum(x, 0)
 def softmax(x):
-    # Subtract max to prevent overflow (numerical stability improvement)
     exp = np.exp(x - np.max(x))
     return exp / exp.sum(axis=0, keepdims=True)
+
 # Neural Network Functions
 def forward(input, w1, b1, w2, b2):
     hidden_output = w1.dot(input) + b1
-    # ReLU activation: make sure the output is in the right range ("clamping")
     hidden_relu = relu(hidden_output)
     final_output = w2.dot(hidden_relu) + b2
-    # Softmax activation: subtract to prevent overflow
     final_softmax = softmax(final_output)
     return hidden_output, hidden_relu, final_output, final_softmax
 
 print("Loading Dataset...")
 with gzip.open("./mnist/t10k-images-idx3-ubyte.gz", "rb") as timgidx3:
     data = np.frombuffer(timgidx3.read(), np.uint8, offset=16)
-    x_test = data.reshape(-1, 784).astype(np.float32).T / 255.0
+    x_test = data.reshape(-1, 784).astype(np.float32) / 255.0
+
 with gzip.open("./mnist/t10k-labels-idx1-ubyte.gz", "rb") as tlblidx1:
     y_test = np.frombuffer(tlblidx1.read(), np.uint8, offset=8)
+
 print("Loading matrices...")
-model = np.load("model.npz")
-# Extract weights
-w1 = model['w1']
-b1 = model['b1']
-w2 = model['w2']
-b2 = model['b2']
+try:
+    model = np.load("model.npz")
+    w1 = model['w1']
+    b1 = model['b1']
+    w2 = model['w2']
+    b2 = model['b2']
+except FileNotFoundError:
+    print("Error: model.npz not found!")
+    exit()
+
 # interactive testing
 while True:
-    # Pick a random index
+    # Pick a random index (0 to 9999)
     index = np.random.randint(0, x_test.shape[0])
     # Get the image and label
     current_image = x_test[index]
     actual_label = y_test[index]
+    # Reshape to (784, 1) for the matrix math
     network_input = current_image.reshape(784, 1)
-    # Make Prediction
-    prediction_probs = forward(network_input, w1, b1, w2, b2)
+    _, _, _, prediction_probs = forward(network_input, w1, b1, w2, b2)
     predicted_label = np.argmax(prediction_probs)
     confidence = prediction_probs[predicted_label][0] * 100
     # visualize
@@ -52,9 +55,7 @@ while True:
     ax1.axis('off')
     # bar graph
     classes = np.arange(10)
-    # flatten to 1D array
     probs = prediction_probs.flatten()
-    # Color the bars: Green if correct, Red if wrong
     bar_color = 'green' if predicted_label == actual_label else 'red'
     ax2.bar(classes, probs, color=bar_color)
     ax2.set_xticks(classes)
@@ -65,7 +66,8 @@ while True:
     plot.suptitle("Close this window to see the next image...", fontsize=14)
     plot.tight_layout()
     plot.show()
-    # ask wether to show another
+    
+    # ask whether to show another
     cont = input("Show another? (y/n): ")
     if cont.lower() != 'y' and cont != '':
         break
