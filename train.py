@@ -1,3 +1,4 @@
+# kyle was here
 import numpy as np
 import gzip
 import matplotlib.pyplot as plot
